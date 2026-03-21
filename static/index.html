@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Username Availability Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #2a2a3a;
+    --accent: #00ffb2;
+    --accent2: #7b5fff;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --danger: #ff4f6a;
+    --warn: #ffb830;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 70% 10%, rgba(123,95,255,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 10% 80%, rgba(0,255,178,0.07) 0%, transparent 60%);
+  }
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #00ffb2, #7b5fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p { color: var(--muted); font-size: 0.75rem; margin-top: 8px; letter-spacing: 0.05em; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 780px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 12px;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent2); }
+  textarea::placeholder { color: var(--muted); }
+  .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  @media(max-width:500px){ .settings-row { grid-template-columns: 1fr; } }
+  label.field-label { display: block; font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+  select:focus { border-color: var(--accent2); }
+  .platform-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .chip { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 0.75rem; transition: all 0.18s; user-select: none; }
+  .chip.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,178,0.07); }
+  .chip:hover { border-color: var(--muted); }
+  button { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.06em; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; transition: all 0.18s; }
+  .btn-primary { background: linear-gradient(135deg, #00ffb2, #00d4a0); color: #0a0a0f; }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-copy { background: transparent; border: 1px solid var(--accent2); color: var(--accent2); padding: 8px 16px; font-size: 0.72rem; }
+  .btn-copy:hover { background: rgba(123,95,255,0.12); }
+  .vpn-banner { display: none; background: rgba(255,184,48,0.1); border: 1px solid var(--warn); border-radius: 10px; padding: 14px 18px; font-size: 0.78rem; color: var(--warn); margin-bottom: 16px; line-height: 1.6; }
+  .vpn-banner.show { display: block; }
+  .progress-wrap { margin-bottom: 16px; }
+  .progress-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 2px; width: 0%; transition: width 0.3s; }
+  .stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { font-size: 0.72rem; color: var(--muted); }
+  .stat span { font-weight: 700; }
+  .stat .green { color: var(--accent); }
+  .stat .red { color: var(--danger); }
+  .results-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  thead th { text-align: left; padding: 10px 14px; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid rgba(42,42,58,0.5); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody td { padding: 10px 14px; vertical-align: middle; }
+  .username-cell { font-weight: 700; letter-spacing: 0.06em; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; }
+  .badge-available { background: rgba(0,255,178,0.12); color: var(--accent); border: 1px solid rgba(0,255,178,0.3); }
+  .badge-taken { background: rgba(255,79,106,0.1); color: var(--danger); border: 1px solid rgba(255,79,106,0.25); }
+  .badge-unknown { background: rgba(107,107,138,0.15); color: var(--muted); border: 1px solid var(--border); }
+  .badge-checking { background: rgba(123,95,255,0.1); color: var(--accent2); border: 1px solid rgba(123,95,255,0.3); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .empty { color: var(--muted); font-size: 0.8rem; padding: 30px 0; text-align: center; }
+  .filter-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-row input[type="text"] { flex: 1; min-width: 160px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.78rem; padding: 8px 12px; outline: none; transition: border-color 0.2s; }
+  .filter-row input[type="text"]:focus { border-color: var(--accent2); }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent); color: #0a0a0f; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; padding: 10px 22px; border-radius: 8px; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); pointer-events: none; z-index: 100; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <h1>USERNAME CHECKER</h1>
+  <p>PASTE · CHECK · COPY AVAILABLE</p>
+</header>
+<div class="card">
+  <h2>📋 Usernames to Check</h2>
+  <textarea id="usernameInput" placeholder="Paste usernames here, one per line"></textarea>
+  <div class="settings-row">
+    <div><label class="field-label">Delay Between Requests</label>
+    <select id="delaySelect"><option value="1.5">1.5s — Balanced</option><option value="2" selected>2.0s — Safe</option><option value="3">3.0s — Very Safe</option></select></div>
+    <div><label class="field-label">Filter Results</label>
+    <select id="filterSelect"><option value="all">Show All</option><option value="available">Available Only</option><option value="taken">Taken Only</option></select></div>
+  </div>
+  <label class="field-label" style="margin-top:18px">Platforms</label>
+  <div class="platform-chips" id="platformChips"></div>
+  <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
+    <button class="btn-primary" id="checkBtn" onclick="startCheck()">▶ Start Checking</button>
+    <button class="btn-secondary" onclick="clearResults()">✕ Clear</button>
+  </div>
+</div>
+<div class="card">
+  <h2>⚡ Results</h2>
+  <div class="vpn-banner" id="vpnBanner">⚠️ <strong>VPN Rotation Reminder</strong> — Switch your VPN server now.</div>
+  <div class="progress-wrap" id="progressWrap" style="display:none">
+    <div class="progress-label"><span id="progressLabel">Checking…</span><span id="progressPct">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+  <div class="stats">
+    <div class="stat">Total: <span class="green" id="statTotal">0</span></div>
+    <div class="stat">Available: <span class="green" id="statAvail">0</span></div>
+    <div class="stat">Taken: <span class="red" id="statTaken">0</span></div>
+  </div>
+  <div class="filter-row">
+    <input type="text" id="searchFilter" placeholder="Search…" oninput="renderTable()">
+    <button class="btn-copy" onclick="copyAvailable()">Copy Available</button>
+  </div>
+  <div class="results-wrap">
+    <table><thead id="tableHead"></thead><tbody id="tableBody"><tr><td colspan="10" class="empty">Paste usernames and hit Start</td></tr></tbody></table>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  let platforms=[];let results=[];let checking=false;
+  async function loadPlatforms(){
+    try{const r=await fetch('/platforms');platforms=await r.json();}
+    catch{platforms=['GitHub','Reddit','Twitch'];}
+    const c=document.getElementById('platformChips');
+    c.innerHTML=platforms.map(p=>`<div class="chip active" data-platform="${p}" onclick="toggleChip(this)">${p}</div>`).join('');
+    buildHead();
+  }
+  function toggleChip(el){el.classList.toggle('active');buildHead();}
+  function getSelected(){return Array.from(document.querySelectorAll('.chip.active')).map(c=>c.dataset.platform);}
+  function buildHead(){const s=getSelected();document.getElementById('tableHead').innerHTML=`<tr><th>Username</th>${s.map(p=>`<th>${p}</th>`).join('')}</tr>`;}
+  async function startCheck(){
+    if(checking)return;
+    const raw=document.getElementById('usernameInput').value.trim();
+    if(!raw){showToast('Paste usernames first!');return;}
+    const usernames=[...new Set(raw.split('\n').map(u=>u.trim()).filter(u=>u.length>0))];
+    const sel=getSelected();
+    if(!sel.length){showToast('Select a platform');return;}
+    checking=true;results=[];
+    document.getElementById('checkBtn').disabled=true;
+    document.getElementById('progressWrap').style.display='block';
+    document.getElementById('vpnBanner').classList.remove('show');
+    usernames.forEach(u=>{const row={username:u,platforms:{}};sel.forEach(p=>row.platforms[p]='checking');results.push(row);});
+    renderTable();updateStats();
+    const delay=parseFloat(document.getElementById('delaySelect').value);
+    for(let i=0;i<usernames.length;i++){
+      const u=usernames[i];
+      updateProgress(i,usernames.length,u);
+      try{
+        const r=await fetch('/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usernames:[u],platforms:sel,delay})});
+        const d=await r.json();
+        if(d.results&&d.results[0]){const idx=results.findIndex(r=>r.username===u);if(idx!==-1)results[idx]=d.results[0];if(d.results[0].vpn_reminder)document.getElementById('vpnBanner').classList.add('show');}
+      }catch{const idx=results.findIndex(r=>r.username===u);if(idx!==-1)sel.forEach(p=>results[idx].platforms[p]='error');}
+      renderTable();updateStats();
+    }
+    updateProgress(usernames.length,usernames.length,'Done!');
+    checking=false;document.getElementById('checkBtn').disabled=false;
+    showToast('Done!');
+  }
+  function updateProgress(c,t,l){const p=t?Math.round(c/t*100):0;document.getElementById('progressFill').style.width=p+'%';document.getElementById('progressLabel').textContent='Checking: '+l;document.getElementById('progressPct').textContent=p+'%';}
+  function updateStats(){const f=results.flatMap(r=>Object.values(r.platforms));document.getElementById('statTotal').textContent=results.length;document.getElementById('statAvail').textContent=f.filter(s=>s==='available').length;document.getElementById('statTaken').textContent=f.filter(s=>s==='taken').length;}
+  function renderTable(){
+    const s=getSelected();const q=document.getElementById('searchFilter').value.toLowerCase();
+    const fm=document.getElementById('filterSelect').value;
+    let rows=results;
+    if(q)rows=rows.filter(r=>r.username.toLowerCase().includes(q));
+    if(fm==='available')rows=rows.filter(r=>Object.values(r.platforms).some(s=>s==='available'));
+    if(fm==='taken')rows=rows.filter(r=>Object.values(r.platforms).every(s=>s==='taken'));
+    const tb=document.getElementById('tableBody');
+    if(!rows.length){tb.innerHTML=`<tr><td colspan="${s.length+1}" class="empty">No results</td></tr>`;return;}
+    tb.innerHTML=rows.map(r=>`<tr><td class="username-cell">${r.username}</td>${s.map(p=>`<td>${badge(r.platforms[p]||'unknown')}</td>`).join('')}</tr>`).join('');
+  }
+  function badge(s){const m={available:['available','✓ Available'],taken:['taken','✗ Taken'],checking:['checking','…'],unknown:['unknown','?'],timeout:['unknown','Timeout'],error:['unknown','Error']};const[c,l]=m[s]||['unknown',s];return`<span class="badge badge-${c}">${l}</span>`;}
+  function copyAvailable(){const a=results.filter(r=>Object.values(r.platforms).some(s=>s==='available')).map(r=>r.username);if(!a.length){showToast('None available yet');return;}navigator.clipboard.writeText(a.join('\n'));showToast('Copied '+a.length+' available!');}
+  function clearResults(){results=[];renderTable();updateStats();document.getElementById('progressWrap').style.display='none';}
+  function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+  document.getElementById('filterSelect').addEventListener('change',renderTable);
+  loadPlatforms();
+</script>
+</body>
+</html>
