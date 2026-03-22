@@ -7,7 +7,7 @@ import os
 import re
 
 app = Flask(__name__, static_folder='static')
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
 PLATFORMS = {
     "GitHub": {
