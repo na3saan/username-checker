@@ -225,6 +225,9 @@ def status():
         "version": "2.1"
     })
 
+from monitor import register_monitor_routes
+register_monitor_routes(app)
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
