@@ -30,14 +30,14 @@ monitoring_active = False
 
 # ── Telegram notifications ────────────────────────────────────────────────────
 
-def send_telegram(message):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+def send_telegram_to(message, token, chat_id):
+    if not token or not chat_id:
         print("Telegram not configured — skipping notification")
         return False
     try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
         resp = requests.post(url, json={
-            "chat_id": TELEGRAM_CHAT_ID,
+            "chat_id": chat_id,
             "text": message,
             "parse_mode": "HTML"
         }, timeout=10)
@@ -45,6 +45,9 @@ def send_telegram(message):
     except Exception as e:
         print(f"Telegram error: {e}")
         return False
+
+def send_telegram(message):
+    return send_telegram_to(message, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
 
 # ── Instagram username check ──────────────────────────────────────────────────
 
@@ -144,7 +147,11 @@ def monitor_loop():
                     f"Instagram → Edit Profile → Username → type <b>{username}</b>\n\n"
                     f"⏰ {datetime.now().strftime('%H:%M:%S')}"
                 )
-                send_telegram(msg)
+                # Use per-username credentials if available
+                info = monitored.get(username, {})
+                token = info.get("token", TELEGRAM_BOT_TOKEN)
+                chat_id = info.get("chat_id", TELEGRAM_CHAT_ID)
+                send_telegram_to(msg, token, chat_id)
                 print(f"  *** ALERT SENT for @{username} ***")
 
             # Small delay between each check to avoid rate limiting
@@ -176,6 +183,8 @@ def register_monitor_routes(app):
         from flask import request, jsonify
         data = request.get_json(silent=True) or {}
         usernames = data.get("usernames", [])
+        token = data.get("token", TELEGRAM_BOT_TOKEN)
+        chat_id = data.get("chat_id", TELEGRAM_CHAT_ID)
         if not usernames:
             return jsonify({"error": "No usernames provided"}), 400
 
@@ -187,7 +196,9 @@ def register_monitor_routes(app):
                     monitored[u] = {
                         "status": "unknown",
                         "added": datetime.now().isoformat(),
-                        "last_checked": None
+                        "last_checked": None,
+                        "token": token,
+                        "chat_id": chat_id,
                     }
                     added.append(u)
 
@@ -223,8 +234,13 @@ def register_monitor_routes(app):
             monitored.clear()
         return jsonify({"cleared": True})
 
-    @app.route("/monitor/test-telegram", methods=["GET"])
+    @app.route("/monitor/test-telegram", methods=["GET", "POST"])
     def test_telegram():
-        from flask import jsonify
-        ok = send_telegram("✅ <b>Monitor connected!</b>\nYour Instagram username monitor is working. You'll be notified here when a username becomes available.")
-        return jsonify({"sent": ok, "configured": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)})
+        from flask import request, jsonify
+        data = request.get_json(silent=True) or {}
+        token = data.get("token", TELEGRAM_BOT_TOKEN)
+        chat_id = data.get("chat_id", TELEGRAM_CHAT_ID)
+        if not token or not chat_id:
+            return jsonify({"sent": False, "configured": False})
+        ok = send_telegram_to("✅ <b>Monitor connected!</b>\nYour Instagram username monitor is working. You will be notified here when a username becomes available.", token, chat_id)
+        return jsonify({"sent": ok, "configured": True})
