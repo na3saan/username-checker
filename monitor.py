@@ -51,6 +51,40 @@ def send_telegram(message):
 
 # ── Instagram username check ──────────────────────────────────────────────────
 
+def check_username_on_platform(username, platform="instagram"):
+    """Route to appropriate checker based on platform."""
+    if platform == "github":
+        try:
+            r = requests.get(f"https://api.github.com/users/{username}",
+                headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "username-checker/1.0"},
+                timeout=6)
+            if r.status_code == 200: return "taken"
+            if r.status_code == 404: return "available"
+            return "unknown"
+        except: return "unknown"
+    elif platform == "reddit":
+        try:
+            r = requests.get(f"https://www.reddit.com/user/{username}/about.json",
+                headers={"User-Agent": random.choice(USER_AGENTS)}, timeout=6)
+            if r.status_code == 200: return "taken"
+            if r.status_code == 404: return "available"
+            return "unknown"
+        except: return "unknown"
+    elif platform == "twitch":
+        try:
+            r = requests.get(f"https://www.twitch.tv/{username}",
+                headers={"User-Agent": random.choice(USER_AGENTS)}, timeout=5)
+            return "taken" if r.status_code == 200 else "available"
+        except: return "unknown"
+    elif platform == "telegram":
+        try:
+            r = requests.get(f"https://t.me/{username}",
+                headers={"User-Agent": random.choice(USER_AGENTS)}, timeout=5)
+            return "taken" if r.status_code == 200 else "available"
+        except: return "unknown"
+    else:
+        return check_instagram_username(username)
+
 def check_instagram_username(username):
     """
     Check via Instagram's signup validation endpoint.
@@ -129,7 +163,8 @@ def monitor_loop():
                 break
 
             prev_status = monitored.get(username, {}).get("status", "unknown")
-            new_status = check_instagram_username(username)
+            platform = monitored.get(username, {}).get("platform", "instagram")
+            new_status = check_username_on_platform(username, platform)
 
             with monitor_lock:
                 if username in monitored:
@@ -140,11 +175,11 @@ def monitor_loop():
 
             # Alert if became available
             if new_status == "available" and prev_status != "available":
+                platform_name = info.get("platform", "instagram").capitalize()
                 msg = (
                     f"🚨 <b>USERNAME AVAILABLE!</b>\n\n"
-                    f"📸 <b>@{username}</b> is now available on Instagram!\n\n"
-                    f"⚡ Claim it NOW:\n"
-                    f"Instagram → Edit Profile → Username → type <b>{username}</b>\n\n"
+                    f"✅ <b>@{username}</b> is now available on <b>{platform_name}</b>!\n\n"
+                    f"⚡ Claim it NOW — open {platform_name} and set your username to <b>{username}</b>\n\n"
                     f"⏰ {datetime.now().strftime('%H:%M:%S')}"
                 )
                 # Use per-username credentials if available
@@ -199,6 +234,7 @@ def register_monitor_routes(app):
                         "last_checked": None,
                         "token": token,
                         "chat_id": chat_id,
+                        "platform": data.get("platform", "instagram"),
                     }
                     added.append(u)
 
