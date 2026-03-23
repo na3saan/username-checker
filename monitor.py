@@ -12,7 +12,7 @@ from datetime import datetime
 
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID   = os.environ.get('TELEGRAM_CHAT_ID', '')
-CHECK_INTERVAL     = int(os.environ.get('CHECK_INTERVAL', 30))  # seconds between checks
+CHECK_INTERVAL     = int(os.environ.get('CHECK_INTERVAL', 15))  # seconds between checks
 
 USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 Version/17.3 Mobile/15E148 Safari/604.1",
@@ -190,7 +190,7 @@ def monitor_loop():
                 print(f"  *** ALERT SENT for @{username} ***")
 
             # Small delay between each check to avoid rate limiting
-            time.sleep(random.uniform(3, 6))
+            time.sleep(random.uniform(1, 2))
 
         print(f"  Cycle complete. Next check in {CHECK_INTERVAL}s")
         time.sleep(CHECK_INTERVAL)
